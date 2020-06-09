@@ -78,7 +78,7 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         self.epsilon = epsilon
         super().__init__(data, **kwargs)
 
-    def estimate(self, start=None):
+    def estimate(self):
         '''
         Estimates the DAG structure that fits best to the given data set using the CBL2 algorithm.
         Only estimates network structure, no parametrization.
@@ -86,73 +86,64 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         if self.class_node not in self.data.columns:
             raise ValueError("Class node must exist in data")
 
-        if not start:
-            ################## Drafting #####################
+        ################## Drafting #####################
 
-            L = []
-            graph = nx.Graph()
-            df_features = self.data.loc[:,
-                                        self.data.columns != self.class_node]
-            total_cols = len(df_features.columns)
-            graph.add_nodes_from(df_features.columns)
-            for i in range(total_cols):
-                from_node = df_features.columns[i]
-                for j in range(i + 1, total_cols):
-                    to_node = df_features.columns[j]
-                    mi = mutual_info_score(
-                        df_features.iloc[:, i], df_features.iloc[:, j]
-                    )
-                    if mi > self.epsilon:
-                        L.append((from_node, to_node, mi))
+        L = []
+        graph = nx.Graph()
+        df_features = self.data.loc[
+            :, self.data.columns != self.class_node
+        ]
+        total_cols = len(df_features.columns)
+        graph.add_nodes_from(df_features.columns)
+        for i in range(total_cols):
+            from_node = df_features.columns[i]
+            for j in range(i + 1, total_cols):
+                to_node = df_features.columns[j]
+                mi = mutual_info_score(
+                    df_features.iloc[:, i], df_features.iloc[:, j]
+                )
+                if mi > self.epsilon:
+                    L.append((from_node, to_node, mi))
 
-            # Sort pairs of nodes by decreasing mutual information
-            L.sort(key=lambda tup: tup[2], reverse=True)
+        # Sort pairs of nodes by decreasing mutual information
+        L.sort(key=lambda tup: tup[2], reverse=True)
 
-            # Get the first two pairs of nodes and add corresponding edges
-            from_node, to_node, mi = L.pop(0)
-            graph.add_edge(from_node, to_node, weight=mi)
-            from_node, to_node, mi = L.pop(0)
-            graph.add_edge(from_node, to_node, weight=mi)
+        # Get the first two pairs of nodes and add corresponding edges
+        from_node, to_node, mi = L.pop(0)
+        graph.add_edge(from_node, to_node, weight=mi)
+        from_node, to_node, mi = L.pop(0)
+        graph.add_edge(from_node, to_node, weight=mi)
 
-            # If there is no adjacency path between a pair of nodes, add the corresponding edge
-            lenght = len(L)
-            i = 0
-            while i < lenght:
-                from_node, to_node, mi = L[i]
-                if len(graph.edges) - 1 == len(graph.nodes):
-                    break
-                if not nx.has_path(graph, from_node, to_node):
-                    graph.add_edge(from_node, to_node, weight=mi)
-                    L.pop(i)
-                    lenght -= 1
-                    i -= 1
-                i += 1
+        # If there is no adjacency path between a pair of nodes, add the corresponding edge
+        lenght = len(L)
+        i = 0
+        while i < lenght:
+            from_node, to_node, mi = L[i]
+            if len(graph.edges) - 1 == len(graph.nodes):
+                break
+            if not nx.has_path(graph, from_node, to_node):
+                graph.add_edge(from_node, to_node, weight=mi)
+                L.pop(i)
+                lenght -= 1
+                i -= 1
+            i += 1
 
-            print(graph.edges)
+        ################## Thickening ###################
 
-            ################## Thickening ###################
+        for i in range(len(L)):
+            from_node, to_node, mi = L[i]
+            if not self.try_to_separate_a(graph, from_node, to_node):
+                graph.add_edge(from_node, to_node, weight=mi)
 
-            for i in range(len(L)):
-                from_node, to_node, mi = L[i]
-                if not self.try_to_separate_a(graph, from_node, to_node):
-                    graph.add_edge(from_node, to_node, weight=mi)
+        ################## Thinning #####################
 
-            print(graph.edges)
-
-            ################## Thinning #####################
-
-            edges = list(graph.edges.data())
-            for edge in edges:
-                from_node, to_node, data = edge
-                graph.remove_edge(from_node, to_node)
-                if (nx.has_path(graph, from_node, to_node) and
-                        not self.try_to_separate_a(graph, from_node, to_node)):
-                    graph.add_edge(from_node, to_node, weight=data['weight'])
-
-            print(graph.edges)
-
-        if start:
-            graph = nx.Graph(start)
+        edges = list(graph.edges)
+        for edge in edges:
+            from_node, to_node = edge
+            graph.remove_edge(from_node, to_node)
+            if (nx.has_path(graph, from_node, to_node) and
+                    not self.try_to_separate_a(graph, from_node, to_node)):
+                graph.add_edge(from_node, to_node)
 
         edges = list(graph.edges)
         for edge in edges:
@@ -162,13 +153,15 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
                     not self.try_to_separate_b(graph, from_node, to_node)):
                 graph.add_edge(from_node, to_node)
 
-        print(graph.edges)
+        # ORIENT EDGES DOES NOT WORK
+        # oriented_edges = self.orient_edges(graph)
+        # digraph = nx.DiGraph(oriented_edges)
+        digraph = nx.dfs_tree(graph, df_features.columns[0])
 
-        oriented_edges = self.orient_edges(graph)
+        for node in df_features.columns:
+            digraph.add_edge(self.class_node, node)
 
-        print(graph.edges)
-
-        return DAG(nx.DiGraph(oriented_edges))
+        return DAG(digraph)
 
     def try_to_separate_a(self, graph, node1, node2):
         node1_neighbors = list(nx.neighbors(graph, node1))
@@ -296,29 +289,31 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         return False
 
     def orient_edges(self, graph):
-        oriented_edges = []
+        oriented_edges = set()
         for s1, s2 in itertools.product(graph.nodes, repeat=2):
-            oriented_edges.extend(
-                self.orient_edge(graph, s1, s2)
-            )
+            new_oriented_edges = self.orient_edge(graph, s1, s2)
+            for a, b in new_oriented_edges:
+                if (b, a) not in oriented_edges:
+                    oriented_edges.add((a, b))
 
-        while len(oriented_edges) < len(graph.edges):
-            lenght = len(oriented_edges)
-            for i in range(lenght):
-                a, b = oriented_edges[i]
-                for c in graph.nodes:
-                    c_neighbors = list(nx.neighbors(graph, c))
-                    if b in c_neighbors and a not in c_neighbors and (b, c) not in oriented_edges:
-                        oriented_edges.append((b, c))
+        oriented_edges_list = list(oriented_edges)
+        lenght = len(oriented_edges_list)
+        for i in range(lenght):
+            a, b = oriented_edges_list[i]
+            for c in graph.nodes:
+                c_neighbors = list(nx.neighbors(graph, c))
+                if (b in c_neighbors and a not in c_neighbors and
+                        (b, c) not in oriented_edges and (c, b) not in oriented_edges):
+                    oriented_edges.add((b, c))
 
-            not_oriented_edges = set(graph.edges).difference(
-                set(oriented_edges)
-            )
-            tmp_graph = nx.DiGraph(oriented_edges)
-            for edge in not_oriented_edges:
-                a, b = edge
-                if a in tmp_graph.nodes and b in tmp_graph.nodes and nx.has_path(tmp_graph, a, b):
-                    oriented_edges.append((a, b))
+        not_oriented_edges = set(graph.edges).difference(oriented_edges)
+        oriented_edges = list(oriented_edges)
+        tmp_graph = nx.DiGraph(oriented_edges)
+        for edge in not_oriented_edges:
+            a, b = edge
+            if (a in tmp_graph.nodes and b in tmp_graph.nodes and nx.has_path(tmp_graph, a, b) and
+                    (b, a) not in oriented_edges):
+                oriented_edges.append((a, b))
 
         return oriented_edges
 
@@ -329,8 +324,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         s1_neighbors = list(nx.neighbors(graph, s1))
         s2_neighbors = list(nx.neighbors(graph, s2))
         inter = set(s1_neighbors).intersection(set(s2_neighbors))
+        paths = list(nx.all_simple_paths(graph, source=s1, target=s2))
         if (s1, s2) not in graph.edges and len(inter) > 0:
-            for path in nx.all_simple_paths(graph, source=s1, target=s2):
+            for path in paths:
                 for node in path[1:-1]:
                     if node in s1_neighbors:
                         n1.append(node)
@@ -339,9 +335,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
 
         n1_prime = []
         n2_prime = []
-        n1_neighbors = [list(nx.neighbors(graph, node)) for node in n1]
-        n2_neighbors = [list(nx.neighbors(graph, node)) for node in n2]
-        for path in nx.all_simple_paths(graph, source=s1, target=s2):
+        n1_neighbors = [list(nx.neighbors(graph, n)) for n in n1]
+        n2_neighbors = [list(nx.neighbors(graph, n)) for n in n2]
+        for path in paths:
             for node in path[1:-1]:
                 if node not in n1 and node in n1_neighbors:
                     n1_prime.append(node)

@@ -14,6 +14,21 @@ from pgmpy.base import DAG
 from sklearn.metrics import mutual_info_score
 
 
+def conditional_mutual_info_score(xi, xj, c):
+    conditions = pd.DataFrame(c)
+    if len(conditions.columns) == 0:
+        return mutual_info_score(xi, xj)
+    cond_mutual_info = 0
+    for _, cond in conditions.iteritems():
+        unique_condition_values = cond.unique()
+        for i in unique_condition_values:
+            condition_proba = np.sum(cond == i) / len(cond)
+            cond_mutual_info += mutual_info_score(
+                xi[cond == i], xj[cond == i],
+            ) * condition_proba
+    return np.sum(cond_mutual_info)
+
+
 class TreeAugmentedNaiveBayesSearch(StructureEstimator):
 
     def __init__(self, data, class_node, root_node=None, **kwargs):
@@ -99,8 +114,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
             from_node = df_features.columns[i]
             for j in range(i + 1, total_cols):
                 to_node = df_features.columns[j]
-                mi = mutual_info_score(
-                    df_features.iloc[:, i], df_features.iloc[:, j]
+                mi = conditional_mutual_info_score(
+                    df_features.iloc[:, i], df_features.iloc[:, j],
+                    self.data.loc[:, self.class_node]
                 )
                 if mi > self.epsilon:
                     L.append((from_node, to_node, mi))
@@ -186,8 +202,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         c = list(n1)
         while True:
             if not skip_step:
-                v = self.conditional_mutual_info_score(
-                    self.data[node1], self.data[node2], self.data[c]
+                v = conditional_mutual_info_score(
+                    self.data[node1], self.data[node2],
+                    self.data[c + [self.class_node]]
                 )
                 if v < self.epsilon:
                     return True
@@ -204,8 +221,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
                 for node in graph.nodes:
                     ci = [n for n in c if n != node]
                     conditions.append(ci)
-                    vi = self.conditional_mutual_info_score(
-                        self.data[node1], self.data[node2], self.data[ci]
+                    vi = conditional_mutual_info_score(
+                        self.data[node1], self.data[node2],
+                        self.data[ci + [self.class_node]]
                     )
                     values.append(vi)
                 min_index = np.argmin(values)
@@ -264,8 +282,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
             c.extend(list(n2_prime))
 
         while True:
-            v = self.conditional_mutual_info_score(
-                self.data[node1], self.data[node2], self.data[c]
+            v = conditional_mutual_info_score(
+                self.data[node1], self.data[node2],
+                self.data[c + [self.class_node]]
             )
             if v < self.epsilon:
                 return True
@@ -273,8 +292,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
             c_prime = list(c)
             for i in c:
                 ci = [n for n in c if n != i]
-                vi = self.conditional_mutual_info_score(
-                    self.data[node1], self.data[node2], self.data[ci]
+                vi = conditional_mutual_info_score(
+                    self.data[node1], self.data[node2],
+                    self.data[ci + [self.class_node]]
                 )
                 if vi < self.epsilon:
                     return True
@@ -352,8 +372,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
             c.extend(list(n2_prime))
 
         while True:
-            v = self.conditional_mutual_info_score(
-                self.data[s1], self.data[s2], self.data[c]
+            v = conditional_mutual_info_score(
+                self.data[s1], self.data[s2],
+                self.data[c + [self.class_node]]
             )
             if v < self.epsilon:
                 return oriented_edges
@@ -361,8 +382,9 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
             c_prime = list(c)
             for i in c:
                 ci = [n for n in c if n != i]
-                vi = self.conditional_mutual_info_score(
-                    self.data[s1], self.data[s2], self.data[ci]
+                vi = conditional_mutual_info_score(
+                    self.data[s1], self.data[s2],
+                    self.data[ci + [self.class_node]]
                 )
                 if vi <= v + self.epsilon:
                     c_prime = [n for n in c_prime if n != i]
@@ -376,17 +398,3 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
                 break
 
         return oriented_edges
-
-    def conditional_mutual_info_score(self, xi, xj, c):
-        conditions = pd.DataFrame(c)
-        if len(conditions.columns) == 0:
-            return mutual_info_score(xi, xj)
-        cond_mutual_info = 0
-        for _, cond in conditions.iteritems():
-            unique_condition_values = cond.unique()
-            for i in unique_condition_values:
-                condition_proba = np.sum(cond == i) / len(cond)
-                cond_mutual_info += mutual_info_score(
-                    xi[cond == i], xj[cond == i],
-                ) * condition_proba
-        return np.sum(cond_mutual_info)

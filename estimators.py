@@ -41,7 +41,7 @@ class TreeAugmentedNaiveBayesSearch(StructureEstimator):
         self.class_node = class_node
         self.root_node = root_node
 
-        super(TreeAugmentedNaiveBayesSearch, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def estimate(self):
         '''
@@ -91,6 +91,7 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         '''
         self.class_node = class_node
         self.epsilon = epsilon
+
         super().__init__(data, **kwargs)
 
     def estimate(self):
@@ -398,3 +399,80 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
                 break
 
         return oriented_edges
+
+
+class ForestAugmentedNaiveBayesSearch(StructureEstimator):
+
+    def __init__(self, data, class_node, root_node=None, **kwargs):
+        '''
+        Search class for learning forest-augmented naive bayes (FAN) graph structure with a given set of variables.
+        FAN is an extension of Naive Bayes classifer and allows a forest structure over the independent variables
+        to account for interaction.
+        See http://www.cs.unb.ca/~hzhang/publications/DASFAA05-final.pdf for reference.
+        '''
+        self.class_node = class_node
+        self.root_node = root_node
+
+        super().__init__(data, **kwargs)
+
+    def estimate(self):
+        '''
+        Estimates the DAG structure that fits best to the given data set using the Chow-Liu algorithm.
+        Only estimates network structure, no parametrization.
+        '''
+        if self.class_node not in self.data.columns:
+            raise ValueError("Class node must exist in data")
+
+        if self.root_node is not None and self.root_node not in self.data.columns:
+            raise ValueError("Root node must exist in data")
+
+        graph = nx.Graph()
+        df_features = self.data.loc[:, self.data.columns != self.class_node]
+        total_cols = len(df_features.columns)
+        cmis = []
+        for i in range(total_cols):
+            from_node = df_features.columns[i]
+            graph.add_node(from_node)
+            for j in range(i + 1, total_cols):
+                to_node = df_features.columns[j]
+                graph.add_node(to_node)
+                cmi = conditional_mutual_info_score(
+                    df_features.iloc[:, i], df_features.iloc[:, j],
+                    self.data.loc[:, self.class_node]
+                )
+                cmis.append(cmi)
+                graph.add_edge(from_node, to_node, weight=cmi)
+        cmi_avg = np.mean(cmis)
+        tree = nx.maximum_spanning_tree(graph)
+
+        if not self.root_node:
+            root_node = df_features.columns[0]
+            root_node_mi = mutual_info_score(
+                df_features.iloc[:, 0], self.data.loc[:, self.class_node]
+            )
+            for i in range(1, total_cols):
+                node = df_features.columns[i]
+                mi = mutual_info_score(
+                    df_features.iloc[:, i], self.data.loc[:, self.class_node]
+                )
+                if mi > root_node_mi:
+                    root_node = node
+                    root_node_mi = mi
+            self.root_node = root_node
+
+        digraph = nx.bfs_tree(tree, self.root_node)
+
+        edges = list(digraph.edges)
+        weights = nx.get_edge_attributes(tree, 'weight')
+        for from_node, to_node in edges:
+            key = (
+                (from_node, to_node) if (from_node, to_node) in weights
+                else (to_node, from_node)
+            )
+            if weights[key] < cmi_avg:
+                digraph.remove_edge(from_node, to_node)
+
+        for node in df_features.columns:
+            digraph.add_edge(self.class_node, node)
+
+        return DAG(digraph)

@@ -45,7 +45,7 @@
 
 \usepackage{titlesec} % Allows customization of titles
 \renewcommand\thesection{\Roman{section}} % Roman numerals for the sections
-\renewcommand\thesubsection{\roman{subsection}} % roman numerals for subsections
+\renewcommand\thesubsection{\roman{subsection}} % Roman numerals for subsections
 \titleformat{\section}[block]{\large\scshape\centering}{\thesection.}{1em}{} % Change the look of the section titles
 \titleformat{\subsection}[block]{\large}{\thesubsection.}{1em}{} % Change the look of the section titles
 
@@ -53,12 +53,15 @@
 \pagestyle{fancy} % All pages have headers and footers
 \fancyhead{} % Blank out the default header
 \fancyfoot{} % Blank out the default footer
-\fancyhead[C]{Running title $\bullet$ May 2016 $\bullet$ Vol. XXI, No. 1} % Custom header text
+\fancyhead[C]{Bayesian network classifiers $\bullet$ \today $\bullet$ Alessio Falai} % Custom header text
 \fancyfoot[RO,LE]{\thepage} % Custom footer text
 
 \usepackage{titling} % Customizing the title section
 
 \usepackage{hyperref} % For hyperlinks in the PDF
+
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
 
 %----------------------------------------------------------------------------------------
 %	TITLE SECTION
@@ -68,11 +71,11 @@
 
 \pretitle{\begin{center}\Huge\bfseries} % Article title formatting
 \posttitle{\end{center}} % Article title closing formatting
-\title{Article Title} % Article title
+\title{Bayesian Network Classifiers} % Article title
 \author{%
-\textsc{John Smith}\thanks{A thank you or further information} \\[1ex] % Your name
-\normalsize University of California \\ % Your institution
-\normalsize \href{mailto:john@smith.com}{john@smith.com} % Your email address
+\textsc{Alessio Falai} \\[1ex] % Your name
+\normalsize University of Bologna \\ % Your institution
+\normalsize \href{mailto:alessio.falai@studio.unibo.it}{alessio.falai@studio.unibo.it} % Your email address
 %\and % Uncomment if 2 authors are required, duplicate these 4 lines if more
 %\textsc{Jane Smith}\thanks{Corresponding author} \\[1ex] % Second author's name
 %\normalsize University of Utah \\ % Second author's institution
@@ -81,7 +84,10 @@
 \date{\today} % Leave empty to omit a date
 \renewcommand{\maketitlehookd}{%
 \begin{abstract}
-\noindent \blindtext % Dummy abstract text - replace \blindtext with your abstract text
+\noindent 
+This report explains the work done and the results achieved in the Knowledge Representation class project, specifically in the module about uncertainty and probabilistic reasoning, whose lectures were held by professor Paolo Torroni.
+In this work, we used the Adult dataset to classify world citizens that perceive a high income, based on different features. The classification task was performed using variuos Bayesian network structures and inference algorithms.
+Probabilistic inference results on a test set were then compared with ground-truth data to evaluate the accuracy of the dataset.
 \end{abstract}
 }
 
@@ -98,69 +104,156 @@
 
 \section{Introduction}
 
-\lettrine[nindent=0em,lines=3]{L} orem ipsum dolor sit amet, consectetur adipiscing elit.
-\blindtext % Dummy text
+\lettrine[nindent=0em,lines=3]{I}n this work, we tested the capabilities of various Bayesian networks structures and inference algorithms combinations in a
+classification task, over the standard Adult dataset, which aims at separating people whose income is greater than 50 thousands dollars per year from the rest.
 
-\blindtext % Dummy text
+The first operation that needed to be done was data cleaning: 
+\begin{itemize}
+  \item Useless features, like fnlwgt, were removed
+  \item Redundant features, like education-num, were removed too
+  \item Rows containing null values were removed, since there were only a few
+\end{itemize}
+
+The second operation that needed to be done was data discretization, to simplify the following construction of the Bayesian networks structures:
+\begin{itemize}
+  \item The age variable was divided into 4 bins (child, young adult, adult and senior)
+  \item The hours-per-week variable was divided into 4 bins (part time, full time, over time and too much time)
+  \item The capital-gain and capital-loss variables were binned according to different quantiles distributions
+\end{itemize}
+
+The output of this pre-processing step will be used as input for the following steps. 
 
 %------------------------------------------------
 
-\section{Methods}
+\section{Bayesian networks}
 
-Maecenas sed ultricies felis. Sed imperdiet dictum arcu a egestas. 
-\begin{itemize}
-\item Donec dolor arcu, rutrum id molestie in, viverra sed diam
-\item Curabitur feugiat
-\item turpis sed auctor facilisis
-\item arcu eros accumsan lorem, at posuere mi diam sit amet tortor
-\item Fusce fermentum, mi sit amet euismod rutrum
-\item sem lorem molestie diam, iaculis aliquet sapien tortor non nisi
-\item Pellentesque bibendum pretium aliquet
-\end{itemize}
-\blindtext % Dummy text
+Different Bayesian networks structures were used to compare classification capabilities over the same dataset, so as to assess which structure could be more suitable to solve the presented problem.
 
-Text requiring further explanation\footnote{Example footnote}.
+Every tested structure is actually based on the Naive Bayes model and compared against it.
+
+\subsection{Naive Bayes (NB)}
+
+The Naive Bayes model has been extensively used in classification tasks, with good accuracy results, because of its simplicity. 
+
+It does not require any structural learning, since it has a fixed structure, where the classification variable is the parent node of every other feature variable.
+
+The Naive Bayes model works by assuming full independence between each pair of variables, given the classification node.
+
+\begin{figure}[h]
+  \caption{Example of a NB model}
+  \centering
+  \tikz{ %
+    \node[latent] (C) {$C$} ; %
+    \node[latent, below=of C] (X1) {$X1$} ; %
+    \node[latent, right=of X1] (X2) {$X2$} ; %
+    \node[latent, right=of X2] (X3) {$X3$} ; %
+    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \edge {C} {X1} ; %
+    \edge {C} {X2} ; %
+    \edge {C} {X3} ; %
+    \edge {C} {X4} ; %
+  }
+\end{figure}
+
+\subsection{Tree-Augmented Naive Bayes (TAN)}
+
+The TAN model is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
+with the exception that, without the classification node and all its related edges, the Bayesian network becomes a tree.
+
+The TAN model needs to be learned from the training data, by using a modified version of the Chow-Liu algorithm.
+
+\begin{figure}[h]
+  \caption{Example of a TAN model}
+  \centering
+  \tikz{ %
+    \node[latent] (C) {$C$} ; %
+    \node[latent, below=of C] (X1) {$X1$} ; %
+    \node[latent, right=of X1] (X2) {$X2$} ; %
+    \node[latent, right=of X2] (X3) {$X3$} ; %
+    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \edge {C} {X1} ; %
+    \edge {C} {X2} ; %
+    \edge {C} {X3} ; %
+    \edge {C} {X4} ; %
+    \edge {X2} {X1} ; %
+    \edge {X2} {X3} ; %
+    \edge {X3} {X4} ; %
+  }
+\end{figure}
+
+\subsection{BN-Augmented Naive Bayes (BAN)}
+
+The BAN model is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
+with the exception that, without the classification node and all its related edges, the Bayesian network becomes a DAG (Directed Acyclic Graph).
+
+The BAN model needs to be learned from the training data, by using a modified CBL2 algorithm.
+
+\begin{figure}[h]
+  \caption{Example of a BAN model}
+  \centering
+  \tikz{ %
+    \node[latent] (C) {$C$} ; %
+    \node[latent, below=of C] (X1) {$X1$} ; %
+    \node[latent, right=of X1] (X2) {$X2$} ; %
+    \node[latent, right=of X2] (X3) {$X3$} ; %
+    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \edge {C} {X1} ; %
+    \edge {C} {X2} ; %
+    \edge {C} {X3} ; %
+    \edge {C} {X4} ; %
+    \edge[bend right=90] {X1} {X3} ; %
+    \edge {X2} {X1} ; %
+    \edge {X2} {X3} ; %
+    \edge {X3} {X4} ; %
+  }
+\end{figure}
+
+\subsection{Forest-Augmented Naive Bayes (FAN)}
+
+The FAN model is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
+with the exception that, without the classification node and all its related edges, the Bayesian network becomes a forest.
+
+The FAN model needs to be learned from the training data, by using a similar reasoning as the Chow-Liu algorithm.
+
+\begin{figure}[h]
+  \caption{Example of a FAN model}
+  \centering
+  \tikz{ %
+    \node[latent] (C) {$C$} ; %
+    \node[latent, below=of C] (X1) {$X1$} ; %
+    \node[latent, right=of X1] (X2) {$X2$} ; %
+    \node[latent, right=of X2] (X3) {$X3$} ; %
+    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \edge {C} {X1} ; %
+    \edge {C} {X2} ; %
+    \edge {C} {X3} ; %
+    \edge {C} {X4} ; %
+    \edge {X2} {X1} ; %
+    \edge {X3} {X4} ; %
+  }
+\end{figure}
+
+%------------------------------------------------
+
+\section{Inference algorithms}
+
+\subsection{Variable elimination}
+
+\subsection{Other}
 
 %------------------------------------------------
 
 \section{Results}
 
-\begin{table}
-\caption{Example table}
-\centering
-\begin{tabular}{llr}
-\toprule
-\multicolumn{2}{c}{Name} \\
-\cmidrule(r){1-2}
-First name & Last Name & Grade \\
-\midrule
-John & Doe & $7.5$ \\
-Richard & Miles & $2$ \\
-\bottomrule
-\end{tabular}
+\begin{table}[h]
+  \caption{Results summary}
+  \begin{tabular}{|c|c|c|l|l|}
+  \hline
+                       & NB & TAN & BAN & FAN \\ \hline
+  Variable elimination &    &     &     &     \\ \hline
+  Other                &    &     &     &     \\ \hline
+  \end{tabular}
 \end{table}
-
-\blindtext % Dummy text
-
-\begin{equation}
-\label{eq:emc}
-e = mc^2
-\end{equation}
-
-\blindtext % Dummy text
-
-%------------------------------------------------
-
-\section{Discussion}
-
-\subsection{Subsection One}
-
-A statement requiring citation \cite{Figueredo:2009dg}.
-\blindtext % Dummy text
-
-\subsection{Subsection Two}
-
-\blindtext % Dummy text
 
 %----------------------------------------------------------------------------------------
 %	REFERENCE LIST
@@ -168,12 +261,36 @@ A statement requiring citation \cite{Figueredo:2009dg}.
 
 \begin{thebibliography}{99} % Bibliography - this is intentionally simple in this template
 
-\bibitem[Figueredo and Wolf, 2009]{Figueredo:2009dg}
-Figueredo, A.~J. and Wolf, P. S.~A. (2009).
-\newblock Assortative pairing and life history strategy - a cross-cultural
-  study.
-\newblock {\em Human Nature}, 20:317--330.
- 
+\bibitem[Chow, Liu, 1968]{}
+Chow, C.K. and Liu, C.N..
+\newblock Approximating discrete probability distributions with dependence trees.
+\newblock {\em IEEE Trans. on Information Theory}, 14 (pp. 462- 467).
+
+\bibitem[Cheng et al., 1997a]{}
+Cheng, J., Bell, D.A. and Liu, W..
+\newblock An Algorithm for Bayesian Belief Network Construction from Data.
+\newblock {\em Proceedings of AI \& STAT'97} (pp. 83-90), Florida.
+
+\bibitem[Cheng et al., 1997b]{}
+Cheng, J., Bell, D.A. and Liu, W..
+\newblock Learning Belief Networks from Data: An Information Theory Based Approach.
+\newblock {\em  Proceedings of ACM CIKM'97}.
+
+\bibitem[Cheng et al., 1999]{}
+Jie Cheng, Russell Greiner.
+\newblock Comparing Bayesian Network Classifiers.
+\newblock {\em UAI'99: Proceedings of the Fifteenth conference on Uncertainty in artificial intelligence} (pp. 101-108).
+
+\bibitem[Friedman et al., 1997]{}
+Jie Cheng, Russell Greiner.
+\newblock Bayesian Network Classifiers.
+\newblock {\em Machine Language}, Volume 29, Issue 2-3.
+
+\bibitem[Jiang et al., 2005]{}
+Jiang, Zhang, Cai, Su.
+\newblock Learning Tree Augmented Naive Bayes for Ranking.
+\newblock {\em DASFAA'05: Proceedings of the 10th international conference on Database Systems for Advanced Applications} (pp. 688-698). 
+
 \end{thebibliography}
 
 %----------------------------------------------------------------------------------------

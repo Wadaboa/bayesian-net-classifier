@@ -85,9 +85,9 @@
 \renewcommand{\maketitlehookd}{%
 \begin{abstract}
 \noindent 
-This report explains the work done and the results achieved in the Knowledge Representation class project, specifically in the module about uncertainty and probabilistic reasoning, whose lectures were held by professor Paolo Torroni.
-In this work, we used the Adult dataset to classify world citizens that perceive a high income, based on different features. The classification task was performed using variuos Bayesian network structures and inference algorithms.
-Probabilistic inference results on a test set were then compared with ground-truth data to evaluate the accuracy of the dataset.
+This report explains the work done and the results achieved in the Knowledge Representation class project, specifically in the module about uncertainty and probabilistic reasoning, held by professor Paolo Torroni.
+In this work, we used the Adult dataset to classify world citizens that perceive a high income, based on different features, that were accurately pre-processed and discretized. The classification task was performed using variuos Bayesian network structures, based on the Naive Bayes model.
+Probabilistic inference results on a test set were then compared with ground-truth data to evaluate the accuracy of the dataset, along with other classification-related measures.
 \end{abstract}
 }
 
@@ -104,8 +104,8 @@ Probabilistic inference results on a test set were then compared with ground-tru
 
 \section{Introduction}
 
-\lettrine[nindent=0em,lines=3]{I}n this work, we tested the capabilities of various Bayesian networks structures and inference algorithms combinations in a
-classification task, over the standard Adult dataset, which aims at separating people whose income is greater than 50 thousands dollars per year from the rest.
+\lettrine[nindent=0em,lines=3]{I}n this work, we tested the capabilities of various Bayesian network structures in a classification task, 
+over the standard Adult dataset \cite{bib:uci}, which aims at separating people whose income is greater than 50 thousands dollars per year from the rest.
 
 The first operation that needed to be done was data cleaning: 
 \begin{itemize}
@@ -114,7 +114,7 @@ The first operation that needed to be done was data cleaning:
   \item Rows containing null values were removed, since there were only a few
 \end{itemize}
 
-The second operation that needed to be done was data discretization, to simplify the following construction of the Bayesian networks structures:
+The second operation that needed to be done was data discretization, to simplify the following construction of the Bayesian network structures:
 \begin{itemize}
   \item The age variable was divided into 4 bins (child, young adult, adult and senior)
   \item The hours-per-week variable was divided into 4 bins (part time, full time, over time and too much time)
@@ -127,13 +127,15 @@ The output of this pre-processing step will be used as input for the following s
 
 \section{Bayesian networks}
 
-Different Bayesian networks structures were used to compare classification capabilities over the same dataset, so as to assess which structure could be more suitable to solve the presented problem.
+Different Bayesian network structures were used to compare classification capabilities over the same dataset, so as to assess which structure could be more suitable to solve the presented problem \cite{bib:chengc}.
 
 Every tested structure is actually based on the Naive Bayes model and compared against it.
 
+In each of the tested Bayesian networks, the various CPDs were estimated from the training dataset using MLE (Maximum Likelihood Estimation).
+
 \subsection{Naive Bayes (NB)}
 
-The Naive Bayes model has been extensively used in classification tasks, with good accuracy results, because of its simplicity. 
+The Naive Bayes model, as shown in figure \ref{fig:nb}, has been extensively used in classification tasks, with good accuracy results, because of its simplicity. 
 
 It does not require any structural learning, since it has a fixed structure, where the classification variable is the parent node of every other feature variable.
 
@@ -153,14 +155,15 @@ The Naive Bayes model works by assuming full independence between each pair of v
     \edge {C} {X3} ; %
     \edge {C} {X4} ; %
   }
+  \label{fig:nb}
 \end{figure}
 
 \subsection{Tree-Augmented Naive Bayes (TAN)}
 
-The TAN model is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
+The TAN model \cite{bib:friedman}, as shown in figure \ref{fig:tan}, is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
 with the exception that, without the classification node and all its related edges, the Bayesian network becomes a tree.
 
-The TAN model needs to be learned from the training data, by using a modified version of the Chow-Liu algorithm.
+The TAN model needs to be learned from the training data, by using a modified version of the Chow-Liu algorithm \cite{bib:cl}.
 
 \begin{figure}[h]
   \caption{Example of a TAN model}
@@ -179,14 +182,17 @@ The TAN model needs to be learned from the training data, by using a modified ve
     \edge {X2} {X3} ; %
     \edge {X3} {X4} ; %
   }
+  \label{fig:tan}
 \end{figure}
 
 \subsection{BN-Augmented Naive Bayes (BAN)}
 
-The BAN model is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
+The BAN model \cite{bib:friedman}, as shown in figure \ref{fig:ban}, is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
 with the exception that, without the classification node and all its related edges, the Bayesian network becomes a DAG (Directed Acyclic Graph).
 
-The BAN model needs to be learned from the training data, by using a modified CBL2 algorithm.
+The BAN model needs to be learned from the training data, by using a modified CBL2 algorithm \cite{bib:chengb}.
+
+The actual implementation of the CBL2 algorithm resulted in much higher running times and similar results w.r.t the simpler and faster TAN model.
 
 \begin{figure}[h]
   \caption{Example of a BAN model}
@@ -206,14 +212,17 @@ The BAN model needs to be learned from the training data, by using a modified CB
     \edge {X2} {X3} ; %
     \edge {X3} {X4} ; %
   }
+  \label{fig:ban}
 \end{figure}
 
 \subsection{Forest-Augmented Naive Bayes (FAN)}
 
-The FAN model is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
+The FAN model \cite{bib:jiang}, as shown in figure \ref{fig:fan}, is just like a Naive Bayes model, so there is a connection from the classification node to every other feature node, 
 with the exception that, without the classification node and all its related edges, the Bayesian network becomes a forest.
 
-The FAN model needs to be learned from the training data, by using a similar reasoning as the Chow-Liu algorithm.
+The FAN model needs to be learned from the training data, by using a similar reasoning as what has been done with the TAN model.
+
+This model gives results similar to the ones achieved by the TAN model, but with a slightly higher running time.
 
 \begin{figure}[h]
   \caption{Example of a FAN model}
@@ -231,29 +240,49 @@ The FAN model needs to be learned from the training data, by using a similar rea
     \edge {X2} {X1} ; %
     \edge {X3} {X4} ; %
   }
+  \label{fig:fan}
 \end{figure}
-
-%------------------------------------------------
-
-\section{Inference algorithms}
-
-\subsection{Variable elimination}
-
-\subsection{Other}
 
 %------------------------------------------------
 
 \section{Results}
 
+Table \ref{table:results} shows the results obtained with the variable elimination inference algorithm, 
+over the various Bayesian network structures, based on different binary classification measures, i.e. accuracy, precision, recall and F-score.
+
+The reported results are averages over different runs.
+
 \begin{table}[h]
   \caption{Results summary}
-  \begin{tabular}{|c|c|c|l|l|}
+  \begin{center}
+  \begin{tabular}{|c|c|c|c|c|}
   \hline
-                       & NB & TAN & BAN & FAN \\ \hline
-  Variable elimination &    &     &     &     \\ \hline
-  Other                &    &     &     &     \\ \hline
+            & NB   & TAN  & BAN  & FAN  \\ \hline
+  Accuracy  & 80\% & 85\% & 84\% & 84\% \\ \hline
+  Precision & 60\% & 73\% & 69\% & 72\% \\ \hline
+  Recall    & 78\% & 63\% & 67\% & 63\% \\ \hline
+  F-score   & 68\% & 68\% & 68\% & 67\% \\ \hline
   \end{tabular}
+  \end{center}
+  \label{table:results}
 \end{table}
+
+%------------------------------------------------
+
+\section{Conclusions}
+
+We developed different variants of the famous Naive-Bayes model, all of which augmented the model with a specific structure over the non-classification variables.
+
+Results show that augmenting the Naive-Bayes model yields better accuracy over a classification task on the Adult dataset. 
+Further investigation would be required to check if this boost in accuracy does not depend on the type of inference algorithm used.
+
+Additional studies would also be required to actually assess which augmentation method should be preferred in specific situations. 
+
+Moreover, practical programming limitations didn't allow us to create hybrid models with both discrete and continuos variables. 
+These limitations led to the discretization of certain features, which would have been better represented as continuos ones.
+
+In conclusion, this work shows that augmenting the simple Naive Bayes model can boost classification-related measures, like accuracy, 
+but different augmentations didn't provide much gain w.r.t. each other in terms of those same measurements. 
 
 %----------------------------------------------------------------------------------------
 %	REFERENCE LIST
@@ -261,32 +290,37 @@ The FAN model needs to be learned from the training data, by using a similar rea
 
 \begin{thebibliography}{99} % Bibliography - this is intentionally simple in this template
 
-\bibitem[Chow, Liu, 1968]{}
+\bibitem[UCI, 2010]{bib:uci}
+A. Frank, A. Asuncion.
+\newblock UCI Machine Learning Repository.
+\newblock {\em \url{http://archive.ics.uci.edu/ml}}.
+
+\bibitem[Chow, Liu, 1968]{bib:cl}
 Chow, C.K. and Liu, C.N..
 \newblock Approximating discrete probability distributions with dependence trees.
 \newblock {\em IEEE Trans. on Information Theory}, 14 (pp. 462- 467).
 
-\bibitem[Cheng et al., 1997a]{}
+\bibitem[Cheng et al., 1997a]{bib:chenga}
 Cheng, J., Bell, D.A. and Liu, W..
 \newblock An Algorithm for Bayesian Belief Network Construction from Data.
 \newblock {\em Proceedings of AI \& STAT'97} (pp. 83-90), Florida.
 
-\bibitem[Cheng et al., 1997b]{}
+\bibitem[Cheng et al., 1997b]{bib:chengb}
 Cheng, J., Bell, D.A. and Liu, W..
 \newblock Learning Belief Networks from Data: An Information Theory Based Approach.
 \newblock {\em  Proceedings of ACM CIKM'97}.
 
-\bibitem[Cheng et al., 1999]{}
+\bibitem[Cheng et al., 1999]{bib:chengc}
 Jie Cheng, Russell Greiner.
 \newblock Comparing Bayesian Network Classifiers.
 \newblock {\em UAI'99: Proceedings of the Fifteenth conference on Uncertainty in artificial intelligence} (pp. 101-108).
 
-\bibitem[Friedman et al., 1997]{}
+\bibitem[Friedman et al., 1997]{bib:friedman}
 Jie Cheng, Russell Greiner.
 \newblock Bayesian Network Classifiers.
 \newblock {\em Machine Language}, Volume 29, Issue 2-3.
 
-\bibitem[Jiang et al., 2005]{}
+\bibitem[Jiang et al., 2005]{bib:jiang}
 Jiang, Zhang, Cai, Su.
 \newblock Learning Tree Augmented Naive Bayes for Ranking.
 \newblock {\em DASFAA'05: Proceedings of the 10th international conference on Database Systems for Advanced Applications} (pp. 688-698). 

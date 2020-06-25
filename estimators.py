@@ -181,16 +181,16 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         return DAG(digraph)
 
     def try_to_separate_a(self, graph, node1, node2):
-        node1_neighbors = list(nx.neighbors(graph, node1))
-        node2_neighbors = list(nx.neighbors(graph, node2))
-        n1 = []
-        n2 = []
+        node1_neighbors = set(nx.neighbors(graph, node1))
+        node2_neighbors = set(nx.neighbors(graph, node2))
+        n1 = set()
+        n2 = set()
         for path in nx.all_simple_paths(graph, source=node1, target=node2):
             for node in path[1:-1]:
                 if node in node1_neighbors:
-                    n1.append(node)
+                    n1.add(node)
                 if node in node2_neighbors:
-                    n2.append(node)
+                    n2.add(node)
 
         # Remove the currently known child-nodes of node1 from N1
         # and child-nodes of node2 from N2 (?)
@@ -200,19 +200,20 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
 
         skip_step = False
         n2_used = False
-        c = list(n1)
+        c = set(n1)
+        print('new try_to_separate_a')
         while True:
             if not skip_step:
                 v = conditional_mutual_info_score(
                     self.data[node1], self.data[node2],
-                    self.data[c + [self.class_node]]
+                    self.data[c.union({self.class_node})]
                 )
                 if v < self.epsilon:
                     return True
 
             if len(c) == 1:
                 if not n2_used:
-                    c = list(n2)
+                    c = set(n2)
                     n2_used = True
                 else:
                     return False
@@ -220,11 +221,11 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
                 values = []
                 conditions = []
                 for node in graph.nodes:
-                    ci = [n for n in c if n != node]
+                    ci = {n for n in c if n != node}
                     conditions.append(ci)
                     vi = conditional_mutual_info_score(
                         self.data[node1], self.data[node2],
-                        self.data[ci + [self.class_node]]
+                        self.data[ci.union({self.class_node})]
                     )
                     values.append(vi)
                 min_index = np.argmin(values)
@@ -234,7 +235,7 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
                     return True
                 elif vm > v:
                     if not n2_used:
-                        c = list(n2)
+                        c = set(n2)
                         n2_used = True
                     else:
                         return False
@@ -249,61 +250,65 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         return False
 
     def try_to_separate_b(self, graph, node1, node2):
-        node1_neighbors = list(nx.neighbors(graph, node1))
-        node2_neighbors = list(nx.neighbors(graph, node2))
-        n1 = []
-        n2 = []
+        node1_neighbors = set(nx.neighbors(graph, node1))
+        node2_neighbors = set(nx.neighbors(graph, node2))
+        n1 = set()
+        n2 = set()
         paths = list(nx.all_simple_paths(graph, source=node1, target=node2))
         for path in paths:
             for node in path[1:-1]:
                 if node in node1_neighbors:
-                    n1.append(node)
+                    n1.add(node)
                 if node in node2_neighbors:
-                    n2.append(node)
+                    n2.add(node)
 
-        n1_prime = []
-        n1_neighbors = [list(nx.neighbors(graph, n)) for n in n1]
+        n1_prime = set()
+        n1_neighbors = set()
+        for n in n1:
+            n1_neighbors.update(set(nx.neighbors(graph, n)))
         for path in paths:
             for node in path[1:-1]:
                 if node in n1_neighbors and node not in n1:
-                    n1_prime.append(node)
+                    n1_prime.add(node)
 
-        n2_prime = []
-        n2_neighbors = [list(nx.neighbors(graph, n)) for n in n2]
+        n2_prime = set()
+        n2_neighbors = set()
+        for n in n2:
+            n2_neighbors.update(set(nx.neighbors(graph, n)))
         for path in paths:
             for node in path[1:-1]:
                 if node in n2_neighbors and node not in n2:
-                    n2_prime.append(node)
+                    n2_prime.add(node)
 
         if len(n1) + len(n1_prime) < len(n2) + len(n2_prime):
-            c = list(n1)
-            c.extend(list(n1_prime))
+            c = set(n1)
+            c.update(set(n1_prime))
         else:
-            c = list(n2)
-            c.extend(list(n2_prime))
+            c = set(n2)
+            c.update(set(n2_prime))
 
         while True:
             v = conditional_mutual_info_score(
                 self.data[node1], self.data[node2],
-                self.data[c + [self.class_node]]
+                self.data[c.union({self.class_node})]
             )
             if v < self.epsilon:
                 return True
 
-            c_prime = list(c)
+            c_prime = set(c)
             for i in c:
-                ci = [n for n in c if n != i]
+                ci = {n for n in c if n != i}
                 vi = conditional_mutual_info_score(
                     self.data[node1], self.data[node2],
-                    self.data[ci + [self.class_node]]
+                    self.data[ci.union({self.class_node})]
                 )
                 if vi < self.epsilon:
                     return True
                 elif vi <= v + self.epsilon and i in c_prime:
-                    c_prime.remove(i)
+                    c_prime.discard(i)
 
             if len(c_prime) < len(c):
-                c = list(c_prime)
+                c = set(c_prime)
             else:
                 return False
 

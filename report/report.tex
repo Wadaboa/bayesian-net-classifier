@@ -63,6 +63,14 @@
 \usepackage{tikz}
 \usetikzlibrary{bayesnet}
 
+\usepackage{makecell}
+\renewcommand\theadfont{\bfseries}
+
+\usepackage{graphicx,nicefrac}
+\newcommand\bsfrac[2]{%
+\scalebox{-1}[1]{\nicefrac{\scalebox{-1}[1]{$#1$}}{\scalebox{-1}[1]{$#2$}}}%
+}
+
 %----------------------------------------------------------------------------------------
 %	TITLE SECTION
 %----------------------------------------------------------------------------------------
@@ -252,18 +260,19 @@ over the various Bayesian network structures, based on different binary classifi
 
 The reported results are averages over different runs.
 
-\begin{table}[h]
+\begin{table}[!htbp]
+  \centering
   \caption{Results summary}
-  \begin{center}
-  \begin{tabular}{|c|c|c|c|c|}
-  \hline
-            & NB   & TAN  & BAN  & FAN  \\ \hline
-  Accuracy  & 80\% & 85\% & 84\% & 84\% \\ \hline
-  Precision & 60\% & 73\% & 69\% & 72\% \\ \hline
-  Recall    & 78\% & 63\% & 67\% & 63\% \\ \hline
-  F-score   & 68\% & 68\% & 68\% & 67\% \\ \hline
+  \begin{tabular}{lllll}
+    \toprule
+    \bsfrac{Models}{Measures (\%)} & \thead{NB} & \thead{TAN} & \thead{BAN} & \thead{FAN} \\
+    \midrule
+    Accuracy & 80 & \textbf{85} & 84 & 84 \\
+    Precision & 60 & \textbf{73} & 69 & 72 \\
+    Recall & \textbf{78} & 63 & 67 & 63 \\
+    F-score & \textbf{68} & \textbf{68} & \textbf{68} & 67 \\ 
+    \bottomrule
   \end{tabular}
-  \end{center}
   \label{table:results}
 \end{table}
 

@@ -15,6 +15,13 @@ from sklearn.metrics import mutual_info_score
 
 
 def conditional_mutual_info_score(xi, xj, c):
+    '''
+    Compute conditional mutual information I(Xi, Xj | C), given
+    numpy arrays or pandas series for xi and xj and a numpy matrix
+    or a a pandas dataframe for c.
+    In this implementation c can be given as a single column or as
+    multiple columns.
+    '''
     conditions = pd.DataFrame(c)
     if len(conditions.columns) == 0:
         return mutual_info_score(xi, xj)
@@ -27,6 +34,31 @@ def conditional_mutual_info_score(xi, xj, c):
                 xi[cond == i], xj[cond == i],
             ) * condition_proba
     return np.sum(cond_mutual_info)
+
+
+def simple_conditional_mutual_info_score(df, xi, xj, c):
+    '''
+    Compute conditional mutual information I(Xi, Xj | C), given
+    a pandas dataframe and column names for xi, xj and c.
+    In this implementation c can only be given as a single column.
+    '''
+    unique_xi_values = df[xi].unique()
+    unique_xj_values = df[xj].unique()
+    unique_c_values = df[c].unique()
+    scores = []
+    for i, j, k in itertools.product(unique_xi_values, unique_xj_values, unique_c_values):
+        prob_ijk = len(
+            df[(df[xi] == i) & (df[xj] == j) & (df[c] == k)]
+        ) / len(df)
+        rdf = df[df[c] == k]
+        prob_ij_k = len(rdf[(rdf[xi] == i) & (rdf[xj] == j)]) / len(rdf)
+        prob_i_k = len(rdf[rdf[xi] == i]) / len(rdf)
+        prob_j_k = len(rdf[rdf[xj] == j]) / len(rdf)
+        current_score = prob_ijk * np.log(
+            prob_ij_k / (prob_i_k * prob_j_k + 10e-5)
+        )
+        scores.append(current_score)
+    return np.nansum(scores)
 
 
 class TreeAugmentedNaiveBayesSearch(StructureEstimator):

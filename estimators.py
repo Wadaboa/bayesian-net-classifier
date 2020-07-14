@@ -201,7 +201,6 @@ class BNAugmentedNaiveBayesSearch(StructureEstimator):
         skip_step = False
         n2_used = False
         c = set(n1)
-        print('new try_to_separate_a')
         while True:
             if not skip_step:
                 v = conditional_mutual_info_score(

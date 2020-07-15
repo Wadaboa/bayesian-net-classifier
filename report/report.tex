@@ -154,10 +154,10 @@ The Naive Bayes model works by assuming full independence between each pair of v
   \centering
   \tikz{ %
     \node[latent] (C) {$C$} ; %
-    \node[latent, below=of C] (X1) {$X1$} ; %
-    \node[latent, right=of X1] (X2) {$X2$} ; %
-    \node[latent, right=of X2] (X3) {$X3$} ; %
-    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \node[obs, below=of C] (X1) {$X1$} ; %
+    \node[obs, right=of X1] (X2) {$X2$} ; %
+    \node[obs, right=of X2] (X3) {$X3$} ; %
+    \node[obs, right=of X3] (X4) {$X4$} ; %
     \edge {C} {X1} ; %
     \edge {C} {X2} ; %
     \edge {C} {X3} ; %
@@ -178,10 +178,10 @@ The TAN model needs to be learned from the training data, by using a modified ve
   \centering
   \tikz{ %
     \node[latent] (C) {$C$} ; %
-    \node[latent, below=of C] (X1) {$X1$} ; %
-    \node[latent, right=of X1] (X2) {$X2$} ; %
-    \node[latent, right=of X2] (X3) {$X3$} ; %
-    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \node[obs, below=of C] (X1) {$X1$} ; %
+    \node[obs, right=of X1] (X2) {$X2$} ; %
+    \node[obs, right=of X2] (X3) {$X3$} ; %
+    \node[obs, right=of X3] (X4) {$X4$} ; %
     \edge {C} {X1} ; %
     \edge {C} {X2} ; %
     \edge {C} {X3} ; %
@@ -207,10 +207,10 @@ The actual implementation of the CBL2 algorithm resulted in much higher running 
   \centering
   \tikz{ %
     \node[latent] (C) {$C$} ; %
-    \node[latent, below=of C] (X1) {$X1$} ; %
-    \node[latent, right=of X1] (X2) {$X2$} ; %
-    \node[latent, right=of X2] (X3) {$X3$} ; %
-    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \node[obs, below=of C] (X1) {$X1$} ; %
+    \node[obs, right=of X1] (X2) {$X2$} ; %
+    \node[obs, right=of X2] (X3) {$X3$} ; %
+    \node[obs, right=of X3] (X4) {$X4$} ; %
     \edge {C} {X1} ; %
     \edge {C} {X2} ; %
     \edge {C} {X3} ; %
@@ -237,10 +237,10 @@ This model gives results similar to the ones achieved by the TAN model, but with
   \centering
   \tikz{ %
     \node[latent] (C) {$C$} ; %
-    \node[latent, below=of C] (X1) {$X1$} ; %
-    \node[latent, right=of X1] (X2) {$X2$} ; %
-    \node[latent, right=of X2] (X3) {$X3$} ; %
-    \node[latent, right=of X3] (X4) {$X4$} ; %
+    \node[obs, below=of C] (X1) {$X1$} ; %
+    \node[obs, right=of X1] (X2) {$X2$} ; %
+    \node[obs, right=of X2] (X3) {$X3$} ; %
+    \node[obs, right=of X3] (X4) {$X4$} ; %
     \edge {C} {X1} ; %
     \edge {C} {X2} ; %
     \edge {C} {X3} ; %
